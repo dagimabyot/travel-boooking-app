@@ -41,4 +41,33 @@ export interface AppNotification {
   type: 'booking' | 'reminder' | 'system';
 }
 
-export type Screen = 'splash' | 'auth' | 'search' | 'results' | 'details' | 'payment' | 'confirmation' | 'history' | 'profile' | 'alerts';
+export interface Package {
+  id: string;
+  name: string;
+  location: string;
+  price: number;
+  rating: number;
+  image: string;
+  description: string;
+  included: string[];
+  duration: string;
+}
+
+export interface Hotel {
+  id: string;
+  name: string;
+  location: string;
+  price: number;
+  rating: number;
+  image: string;
+  description: string;
+  amenities: string[];
+}
+
+export type Screen = 
+  | 'splash' 
+  | 'auth-welcome' | 'auth-email' | 'auth-password' | 'auth-signup' | 'auth-forgot' | 'auth-verify' 
+  | 'home' | 'packages' | 'package-details' | 'flight-search' | 'flight-results' | 'flight-details' 
+  | 'hotel-search' | 'hotel-results' | 'hotel-details' 
+  | 'seat-selection' | 'check-availability' | 'payment' | 'confirmation' | 'ticket'
+  | 'my-trips' | 'saved' | 'profile' | 'settings' | 'alerts';

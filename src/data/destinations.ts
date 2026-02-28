@@ -3,7 +3,7 @@ export interface Destination {
   location: string;
   description: string;
   weather: string;
-  price: number;
+  price?: number;
   image: {
     url: string;
     source: string;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FAMOUS_PLACES } from './data/destinations';
 import type { Destination } from './data/destinations';
@@ -44,18 +44,30 @@ import {
   Check,
   Download,
   Hotel,
-  Heart
+  Heart,
+  Home,
+  Briefcase,
+  Bookmark,
+  ArrowUpDown,
+  Share2,
+  Navigation,
+  Clock,
+  Car,
+  Map
 } from 'lucide-react';
-import { User, Flight, Booking, Screen, AppNotification } from './types';
+import { User, Flight, Booking, Screen, AppNotification, Package, Hotel as HotelType } from './types';
 
 // --- Translations ---
 
 const translations: any = {
   English: {
+    home: "Home",
     search: "Search",
-    trips: "Trips",
+    trips: "My Trip",
     alerts: "Alerts",
     profile: "Profile",
+    saved: "Saved",
+    settings: "Settings",
     popular: "Popular Destinations",
     seeAll: "See all",
     bookNow: "Book Now",
@@ -611,21 +623,25 @@ const translations: any = {
 
 // --- Components ---
 
-const Navbar = ({ activeScreen, setScreen, language }: { activeScreen: Screen, setScreen: (s: Screen) => void, user: User | null, language: string }) => {
-  if (activeScreen === 'splash' || activeScreen === 'auth') return null;
+const Navbar = ({ activeScreen, setScreen, language }: { activeScreen: Screen, setScreen: (s: Screen) => void, language: string }) => {
+  if (activeScreen === 'splash' || (activeScreen as string).startsWith('auth-')) return null;
   const t = (key: string) => translations[language]?.[key] || translations['English'][key];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-3 flex justify-between items-center z-50 md:top-0 md:bottom-auto md:px-12 transition-colors">
-      <div className="hidden md:flex items-center gap-2 text-primary font-bold text-xl cursor-pointer" onClick={() => setScreen('search')}>
-        <Plane className="rotate-45" />
-        <span>FlyBook</span>
+    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 px-6 py-4 flex justify-between items-center z-50 md:top-0 md:bottom-auto md:border-t-0 md:border-b md:px-12">
+      <div className="hidden md:flex items-center gap-2 cursor-pointer" onClick={() => setScreen('home')}>
+        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+          <Plane size={20} className="rotate-45" />
+        </div>
+        <span className="font-bold text-xl dark:text-white">GoTravel</span>
       </div>
-      <div className="flex justify-around w-full md:w-auto md:gap-8">
-        <NavItem icon={<Search size={20} />} label={t('search')} active={activeScreen === 'search' || activeScreen === 'results'} onClick={() => setScreen('search')} />
-        <NavItem icon={<History size={20} />} label={t('trips')} active={activeScreen === 'history'} onClick={() => setScreen('history')} />
-        <NavItem icon={<Bell size={20} />} label={t('alerts')} active={activeScreen === 'alerts'} onClick={() => setScreen('alerts')} />
-        <NavItem icon={<UserIcon size={20} />} label={t('profile')} active={activeScreen === 'profile'} onClick={() => setScreen('profile')} />
+      
+      <div className="flex justify-between w-full md:w-auto md:gap-8">
+        <NavItem icon={<Home size={24} />} active={activeScreen === 'home'} onClick={() => setScreen('home')} />
+        <NavItem icon={<Briefcase size={24} />} active={activeScreen === 'my-trips'} onClick={() => setScreen('my-trips')} />
+        <NavItem icon={<Search size={24} />} active={activeScreen === 'flight-search'} onClick={() => setScreen('flight-search')} />
+        <NavItem icon={<Bookmark size={24} />} active={activeScreen === 'saved'} onClick={() => setScreen('saved')} />
+        <NavItem icon={<Settings size={24} />} active={activeScreen === 'settings'} onClick={() => setScreen('settings')} />
       </div>
     </nav>
   );
@@ -640,191 +656,348 @@ const NavItem = ({ icon, label, active, onClick }: { icon: any, label: string, a
 
 // --- Screens ---
 
-const SplashScreen = ({ onLogin, onSignup, language }: { onLogin: () => void, onSignup: () => void, language: string }) => {
-  const t = (key: string) => translations[language]?.[key] || translations['English'][key];
+const SplashScreen = ({ onNext }: { onNext: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(onNext, 2000);
+    return () => clearTimeout(timer);
+  }, [onNext]);
+
   return (
-    <div className="fixed inset-0 bg-gradient-to-b from-sky-400 to-blue-600 flex flex-col items-center justify-center text-white z-[100] overflow-hidden">
+    <div className="fixed inset-0 bg-white flex flex-col items-center justify-center z-[100]">
       <motion.div
-        animate={{ 
-          y: [0, -20, 0],
-          rotate: [45, 40, 45]
-        }}
-        transition={{ 
-          duration: 4, 
-          repeat: Infinity, 
-          ease: "easeInOut" 
-        }}
-        className="mb-8 relative"
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="flex flex-col items-center"
       >
-        <div className="absolute -top-10 -left-10 opacity-20">
-          <Cloud size={60} />
+        <div className="relative w-24 h-24 mb-6">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-full bg-slate-200 rounded-full" />
+          <motion.div 
+            initial={{ x: -20, rotate: -30 }}
+            animate={{ x: 0, rotate: -30 }}
+            className="absolute top-4 left-0 w-16 h-4 bg-blue-500 rounded-lg shadow-lg"
+          />
+          <motion.div 
+            initial={{ x: 20, rotate: 30 }}
+            animate={{ x: 0, rotate: 30 }}
+            className="absolute top-12 right-0 w-16 h-4 bg-green-500 rounded-lg shadow-lg"
+          />
         </div>
-        <div className="absolute -bottom-10 -right-10 opacity-20">
-          <Cloud size={40} />
-        </div>
-        <Plane size={100} className="drop-shadow-2xl" />
+        <h1 className="text-3xl font-bold text-slate-900 mb-1">GoTravel</h1>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em]">FIND, PLAN, GO</p>
       </motion.div>
-      
-      <motion.h1
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="text-5xl font-extrabold tracking-tighter mb-2"
-      >
-        FlyBook
-      </motion.h1>
-      
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.8 }}
-        className="text-lg font-medium mb-12"
-      >
-        {t('seamlessTravel')}
-      </motion.p>
+    </div>
+  );
+};
 
-      <div className="w-full max-w-xs space-y-4 px-6">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={onSignup}
-          className="w-full bg-accent text-white py-4 rounded-2xl font-bold shadow-xl shadow-accent/30"
-        >
-          {t('createAccount')}
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={onLogin}
-          className="w-full bg-transparent border-2 border-white/50 text-white py-4 rounded-2xl font-bold backdrop-blur-sm"
-        >
-          {t('signIn')}
-        </motion.button>
+const WelcomeScreen = ({ onSignup, onLogin }: { onSignup: () => void, onLogin: () => void }) => {
+  const handleSocialLogin = async (provider: 'google' | 'facebook') => {
+    try {
+      const response = await fetch(`/api/auth/${provider}/url`);
+      const { url } = await response.json();
+      const authWindow = window.open(url, 'oauth_popup', 'width=600,height=700');
+      
+      if (!authWindow) {
+        alert('Please allow popups for this site to connect your account.');
+      }
+    } catch (error) {
+      console.error(`${provider} auth error:`, error);
+    }
+  };
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const origin = event.origin;
+      if (!origin.endsWith('.run.app') && !origin.includes('localhost')) return;
+      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+        // In a real app, we'd fetch the user data here
+        // For this demo, we'll trigger the login success
+        window.location.reload(); // Simple way to refresh state if server handles session
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 bg-white z-[90] flex flex-col">
+      <div className="relative h-[60%] w-full overflow-hidden">
+        <img 
+          src="https://images.pexels.com/photos/2108845/pexels-photo-2108845.jpeg" 
+          alt="Traveler" 
+          className="w-full h-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent" />
       </div>
-
-      <div className="absolute bottom-10 opacity-30">
-        <Globe size={120} />
+      
+      <div className="flex-1 px-8 flex flex-col items-center -mt-20 relative z-10">
+        <h2 className="text-3xl font-bold text-slate-900 mb-2">Welcome</h2>
+        <p className="text-slate-500 text-center mb-10 max-w-[240px]">Explore the new experience with GoTravel</p>
+        
+        <div className="w-full space-y-4">
+          <button 
+            onClick={() => handleSocialLogin('google')}
+            className="w-full py-4 rounded-full border border-slate-200 flex items-center justify-center gap-3 font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <Chrome size={20} className="text-red-500" />
+            Continue With Google
+          </button>
+          
+          <button 
+            onClick={() => handleSocialLogin('facebook')}
+            className="w-full py-4 rounded-full border border-slate-200 flex items-center justify-center gap-3 font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <Facebook size={20} className="text-blue-600" />
+            Continue With Facebook
+          </button>
+        </div>
+        
+        <div className="mt-auto mb-10 flex gap-1 text-sm">
+          <span className="text-slate-400">Don't have account?</span>
+          <button onClick={onSignup} className="text-red-500 font-bold">Sign Up</button>
+          <span className="text-slate-400 mx-1">or</span>
+          <button onClick={onLogin} className="text-blue-600 font-bold">Log In</button>
+        </div>
       </div>
     </div>
   );
 };
 
-const AuthScreen = ({ onLogin, initialIsLogin = true, onBack, language }: { onLogin: (u: User) => void, initialIsLogin?: boolean, onBack: () => void, language: string }) => {
-  const [isLogin, setIsLogin] = useState(initialIsLogin);
+const EmailScreen = ({ onContinue, onSignup, onBack }: { onContinue: (email: string) => void, onSignup: () => void, onBack: () => void }) => {
+  const [email, setEmail] = useState('');
+  
+  return (
+    <div className="fixed inset-0 bg-white z-[90] p-8 flex flex-col">
+      <button onClick={onBack} className="mb-10 w-10 h-10 flex items-center justify-center rounded-full border border-slate-100">
+        <ArrowLeft size={20} className="text-slate-600" />
+      </button>
+      
+      <h2 className="text-2xl font-bold text-slate-900 mb-10">What's Your Email?</h2>
+      
+      <div className="space-y-6 flex-1">
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email</label>
+          <input 
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="example@gmail.com"
+            className="w-full py-4 border-b border-slate-100 focus:border-blue-600 outline-none transition-colors text-slate-800"
+          />
+        </div>
+        
+        <button 
+          onClick={() => onContinue(email)}
+          className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-600/20"
+        >
+          Continue
+        </button>
+        
+        <div className="text-center">
+          <p className="text-sm text-slate-400">
+            Don't have account? <button onClick={onSignup} className="text-red-500 font-bold">Sign Up</button>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PasswordScreen = ({ onContinue, onForgot, onBack }: { onContinue: (password: string) => void, onForgot: () => void, onBack: () => void }) => {
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  
+  return (
+    <div className="fixed inset-0 bg-white z-[90] p-8 flex flex-col">
+      <button onClick={onBack} className="mb-10 w-10 h-10 flex items-center justify-center rounded-full border border-slate-100">
+        <ArrowLeft size={20} className="text-slate-600" />
+      </button>
+      
+      <h2 className="text-2xl font-bold text-slate-900 mb-10">Enter Password!</h2>
+      
+      <div className="space-y-6 flex-1">
+        <div className="space-y-2 relative">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Password</label>
+          <input 
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            className="w-full py-4 border-b border-slate-100 focus:border-blue-600 outline-none transition-colors text-slate-800 pr-10"
+          />
+          <button 
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-0 bottom-4 text-slate-400"
+          >
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+        </div>
+        
+        <button 
+          onClick={() => onContinue(password)}
+          className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-600/20"
+        >
+          Continue
+        </button>
+        
+        <div className="text-center">
+          <button onClick={onForgot} className="text-sm text-red-500 font-bold">Forgot Password?</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SignupScreen = ({ onSignup, onLogin, onBack }: { onSignup: (name: string, email: string, pass: string) => void, onLogin: () => void, onBack: () => void }) => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const t = (key: string) => translations[language]?.[key] || translations['English'][key];
+  
+  return (
+    <div className="fixed inset-0 bg-white z-[90] p-8 flex flex-col overflow-y-auto">
+      <button onClick={onBack} className="mb-10 w-10 h-10 flex items-center justify-center rounded-full border border-slate-100">
+        <ArrowLeft size={20} className="text-slate-600" />
+      </button>
+      
+      <h2 className="text-2xl font-bold text-slate-900 mb-10">Sign Up</h2>
+      
+      <div className="space-y-6 flex-1">
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Name</label>
+          <input 
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Your Name"
+            className="w-full py-4 border-b border-slate-100 focus:border-blue-600 outline-none transition-colors text-slate-800"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email</label>
+          <input 
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Your Email"
+            className="w-full py-4 border-b border-slate-100 focus:border-blue-600 outline-none transition-colors text-slate-800"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Password</label>
+          <input 
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Your Password"
+            className="w-full py-4 border-b border-slate-100 focus:border-blue-600 outline-none transition-colors text-slate-800"
+          />
+        </div>
+        
+        <button 
+          onClick={() => onSignup(name, email, password)}
+          className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-600/20"
+        >
+          Create Account
+        </button>
+        
+        <div className="text-center pb-10">
+          <p className="text-sm text-slate-400">
+            Already have account? <button onClick={onLogin} className="text-red-500 font-bold">Log In</button>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    const endpoint = isLogin ? '/api/auth/login' : '/api/auth/signup';
-    const body = isLogin ? { email, password } : { email, password, name };
+const ForgotScreen = ({ onSend, onBack }: { onSend: (email: string) => void, onBack: () => void }) => {
+  const [email, setEmail] = useState('');
+  
+  return (
+    <div className="fixed inset-0 bg-white z-[90] p-8 flex flex-col">
+      <button onClick={onBack} className="mb-10 w-10 h-10 flex items-center justify-center rounded-full border border-slate-100">
+        <ArrowLeft size={20} className="text-slate-600" />
+      </button>
+      
+      <h2 className="text-2xl font-bold text-slate-900 mb-2">Forget Password?</h2>
+      <p className="text-slate-400 text-sm mb-10">Enter your email address</p>
+      
+      <div className="space-y-6 flex-1">
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Your email</label>
+          <input 
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Your email"
+            className="w-full py-4 border-b border-slate-100 focus:border-blue-600 outline-none transition-colors text-slate-800"
+          />
+        </div>
+        
+        <button 
+          onClick={() => onSend(email)}
+          className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-600/20"
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const VerifyScreen = ({ email, onVerify, onResend, onBack }: { email: string, onVerify: (code: string) => void, onResend: () => void, onBack: () => void }) => {
+  const [code, setCode] = useState(['', '', '', '']);
+  
+  const handleChange = (index: number, val: string) => {
+    if (val.length > 1) return;
+    const newCode = [...code];
+    newCode[index] = val;
+    setCode(newCode);
     
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (res.ok) onLogin(data);
-      else alert(data.error);
-    } catch (err) {
-      console.error(err);
+    // Auto focus next
+    if (val && index < 3) {
+      const nextInput = document.getElementById(`code-${index + 1}`);
+      nextInput?.focus();
     }
   };
-
+  
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-950 relative overflow-hidden transition-colors">
-      <div className="absolute top-20 left-10 text-slate-100 dark:text-slate-900 -z-10">
-        <Cloud size={100} />
-      </div>
-      <div className="absolute bottom-20 right-10 text-slate-100 dark:text-slate-900 -z-10">
-        <Plane size={150} className="rotate-12 opacity-50" />
-      </div>
-
-      <button onClick={onBack} className="absolute top-8 left-8 p-2 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700">
-        <ArrowLeft size={20} className="text-slate-600 dark:text-slate-400" />
+    <div className="fixed inset-0 bg-white z-[90] p-8 flex flex-col">
+      <button onClick={onBack} className="mb-10 w-10 h-10 flex items-center justify-center rounded-full border border-slate-100">
+        <ArrowLeft size={20} className="text-slate-600" />
       </button>
-
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-xl p-8 relative z-10 border border-slate-100 dark:border-slate-800">
-        <div className="flex justify-center mb-8">
-          <div className="bg-primary/10 p-4 rounded-full">
-            <Plane className="text-primary rotate-45" size={32} />
-          </div>
-        </div>
-        <h2 className="text-2xl font-bold text-center mb-2 dark:text-white">{isLogin ? t('welcomeBack') : t('createAccount')}</h2>
-        <p className="text-slate-500 dark:text-slate-400 text-center mb-8 text-sm">
-          {isLogin ? t('signInToContinue') : t('joinFlyBook')}
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1 ml-1">{t('fullName')}</label>
-              <input 
-                type="text" 
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border-transparent dark:border-slate-700 focus:bg-white dark:focus:bg-slate-700 focus:border-primary focus:ring-0 transition-all dark:text-white"
-                placeholder="John Doe"
-                required
-              />
-            </div>
-          )}
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1 ml-1">{t('email')}</label>
-            <input 
-              type="email" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border-transparent dark:border-slate-700 focus:bg-white dark:focus:bg-slate-700 focus:border-primary focus:ring-0 transition-all dark:text-white"
-              placeholder="name@example.com"
-              required
-            />
-          </div>
-          <div>
-            <div className="flex justify-between items-center mb-1 ml-1">
-              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">{t('password')}</label>
-              {isLogin && <button type="button" className="text-[10px] font-bold text-primary">{t('forgotPassword')}</button>}
-            </div>
-            <input 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 border-transparent dark:border-slate-700 focus:bg-white dark:focus:bg-slate-700 focus:border-primary focus:ring-0 transition-all dark:text-white"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-          <button type="submit" className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all mt-4">
-            {isLogin ? t('signIn') : t('createAccount')}
-          </button>
-        </form>
-
-        <div className="mt-8">
-          <div className="relative flex items-center justify-center mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-100 dark:border-slate-800"></div>
-            </div>
-            <span className="relative px-4 bg-white dark:bg-slate-900 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('orContinueWith')}</span>
-          </div>
-          
-          <div className="flex justify-center gap-4">
-            <SocialButton icon={<Chrome size={20} />} />
-            <SocialButton icon={<Apple size={20} />} />
-            <SocialButton icon={<Facebook size={20} />} />
-          </div>
-        </div>
-
-        <div className="mt-8 text-center">
-          <button 
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-primary transition-colors"
-          >
-            {isLogin ? t('noAccount') : t('alreadyAccount')}
-          </button>
-        </div>
+      
+      <h2 className="text-2xl font-bold text-slate-900 mb-2 text-center">Verification</h2>
+      <p className="text-slate-400 text-sm mb-10 text-center">Please enter the code we sent to <br/><span className="text-slate-600 font-medium">{email}</span></p>
+      
+      <div className="flex justify-center gap-4 mb-10">
+        {code.map((c, i) => (
+          <input 
+            key={i}
+            id={`code-${i}`}
+            type="text"
+            value={c}
+            onChange={(e) => handleChange(i, e.target.value)}
+            className="w-14 h-14 border border-slate-200 rounded-full text-center text-xl font-bold focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all"
+          />
+        ))}
       </div>
+      
+      <div className="text-center">
+        <p className="text-sm text-slate-400">
+          I don't receive a code! <button onClick={onResend} className="text-red-500 font-bold">Please Resend</button>
+        </p>
+      </div>
+      
+      <button 
+        onClick={() => onVerify(code.join(''))}
+        className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-600/20 mt-10"
+      >
+        Verify
+      </button>
     </div>
   );
 };
@@ -921,302 +1094,319 @@ const LocationInput = ({ label, value, onChange, placeholder, icon: Icon }: any)
   );
 };
 
-const SearchScreen = ({ onSearch, language, currency }: { onSearch: (from: string, to: string, date: string, flightClass: string) => void, language: string, currency: string }) => {
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [date, setDate] = useState('2024-06-15');
-  const [flightClass, setFlightClass] = useState('Economy');
-  const [showDestinationInfo, setShowDestinationInfo] = useState<Destination | null>(null);
-  const [showAllDestinations, setShowAllDestinations] = useState(false);
-  const t = (key: string) => translations[language]?.[key] || translations['English'][key];
-
-  const popularDestinations = showAllDestinations ? FAMOUS_PLACES : FAMOUS_PLACES.slice(0, 4);
+const HomeScreen = ({ 
+  user, 
+  onSelectPackage, 
+  onSearchFlights, 
+  onSearchHotels,
+  language 
+}: { 
+  user: User | null, 
+  onSelectPackage: (p: Package) => void,
+  onSearchFlights: () => void,
+  onSearchHotels: () => void,
+  language: string 
+}) => {
+  const [activeTab, setActiveTab] = useState<'packages' | 'flights' | 'places' | 'hotels'>('packages');
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [popularPackages, setPopularPackages] = useState<Package[]>([]);
+  
+  useEffect(() => {
+    fetch('/api/packages/search').then(res => res.json()).then(data => {
+      setPackages(data);
+      setPopularPackages(data.slice(0, 5));
+    });
+  }, []);
 
   return (
-    <div className="pb-24 pt-8 px-4 md:px-6 max-w-4xl mx-auto relative overflow-x-hidden">
-      <header className="flex justify-between items-center mb-8 px-2">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight dark:text-white">FlyBook</h1>
-          <p className="text-slate-500 dark:text-slate-400">{t('search')}</p>
+    <div className="pb-24 pt-8 px-6 max-w-4xl mx-auto">
+      <header className="flex justify-between items-center mb-8">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 bg-blue-600 rounded-full" />
+          <span className="font-bold text-slate-900 dark:text-white">New York, USA</span>
         </div>
-        <button className="bg-white dark:bg-slate-800 p-3 rounded-full shadow-sm border border-slate-100 dark:border-slate-700">
-          <Bell size={20} className="text-slate-600 dark:text-slate-400" />
-        </button>
+        <div className="w-10 h-10 bg-slate-200 rounded-full overflow-hidden">
+          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Guest'}`} alt="Avatar" />
+        </div>
       </header>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 mb-8 relative overflow-hidden">
-        <div className="absolute -top-10 -right-10 opacity-5 text-slate-200">
-          <Plane size={120} className="rotate-45" />
-        </div>
-        
-        <div className="space-y-4 relative z-10">
-          <LocationInput 
-            placeholder={t('from')}
-            value={from}
-            onChange={setFrom}
-            icon={MapPin}
-          />
-          
-          <div className="flex justify-center -my-2 relative z-10">
-            <button 
-              onClick={() => {
-                const temp = from;
-                setFrom(to);
-                setTo(temp);
-              }}
-              className="bg-primary text-white p-2 rounded-full shadow-lg border-4 border-white dark:border-slate-900 hover:scale-110 transition-transform"
-            >
-              <Plane className="rotate-90" size={20} />
-            </button>
-          </div>
+      <div className="flex gap-6 mb-8 border-b border-slate-100 dark:border-slate-800">
+        {(['packages', 'flights', 'places', 'hotels'] as const).map(tab => (
+          <button 
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`pb-2 text-sm font-bold capitalize transition-all relative ${activeTab === tab ? 'text-red-500' : 'text-slate-400'}`}
+          >
+            {tab}
+            {activeTab === tab && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500" />}
+          </button>
+        ))}
+      </div>
 
-          <LocationInput 
-            placeholder={t('to')}
-            value={to}
-            onChange={setTo}
-            icon={MapPin}
-          />
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                <Calendar size={18} />
-              </div>
-              <input 
-                type="date" 
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-700 focus:border-primary focus:ring-0 transition-all text-sm dark:text-white"
-              />
-            </div>
-            <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                <UserIcon size={18} />
-              </div>
-              <select className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-700 focus:border-primary focus:ring-0 transition-all text-sm appearance-none dark:text-white">
-                <option>1 {t('passengers')}</option>
-                <option>2 {t('passengers')}</option>
-                <option>3 {t('passengers')}</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            {['economy', 'business', 'first'].map((c) => (
-              <button
-                key={c}
-                onClick={() => setFlightClass(c)}
-                className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all ${flightClass === c ? 'bg-primary text-white' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}
+      {activeTab === 'packages' && (
+        <div className="space-y-8">
+          <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar">
+            {packages.map(pkg => (
+              <motion.div 
+                key={pkg.id}
+                whileHover={{ scale: 1.02 }}
+                onClick={() => onSelectPackage(pkg)}
+                className="min-w-[200px] h-[260px] rounded-3xl overflow-hidden relative cursor-pointer shadow-lg"
               >
-                {t(c)}
-              </button>
+                <img src={pkg.image} alt={pkg.name} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-4 left-4 text-white">
+                  <p className="font-bold">{pkg.name}</p>
+                  <p className="text-xs opacity-80">{pkg.location}</p>
+                </div>
+              </motion.div>
             ))}
           </div>
 
-          <button 
-            onClick={() => {
-              if (!from || !to) {
-                alert(t('selectOriginDest'));
-                return;
-              }
-              onSearch(from, to, date, flightClass);
-            }}
-            className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all mt-2 flex items-center justify-center gap-2"
-          >
-            <Search size={20} />
-            {t('findFlights')}
-          </button>
-        </div>
-      </div>
-
-      <section className="mt-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="font-bold text-lg dark:text-white">{t('popular')}</h2>
-          <button 
-            onClick={() => setShowAllDestinations(!showAllDestinations)}
-            className="text-primary text-sm font-semibold"
-          >
-            {showAllDestinations ? 'Show less' : t('seeAll')}
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          {popularDestinations.map((dest, idx) => (
-            <DestinationCard 
-              key={idx}
-              city={dest.place} 
-              country={dest.location} 
-              price={dest.price || 400} 
-              image={dest.image.url} 
-              onClick={() => setShowDestinationInfo(dest)}
-              currency={currency}
-              t={t}
-            />
-          ))}
-        </div>
-      </section>
-
-      <AnimatePresence>
-        {showDestinationInfo && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-end md:items-center justify-center p-4"
-            onClick={() => setShowDestinationInfo(null)}
-          >
-            <motion.div 
-              initial={{ y: 100 }}
-              animate={{ y: 0 }}
-              exit={{ y: 100 }}
-              className="bg-white dark:bg-slate-900 w-full max-w-md rounded-t-3xl md:rounded-3xl p-8 max-h-[90vh] overflow-y-auto"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="text-2xl font-bold dark:text-white">{showDestinationInfo.place}</h3>
-                  <p className="text-slate-500 dark:text-slate-400">{showDestinationInfo.location}</p>
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-lg dark:text-white">Popular Packages</h3>
+              <button className="text-xs text-blue-600 font-bold">See all</button>
+            </div>
+            <div className="space-y-4">
+              {popularPackages.map(pkg => (
+                <div 
+                  key={pkg.id} 
+                  onClick={() => onSelectPackage(pkg)}
+                  className="bg-white dark:bg-slate-900 p-4 rounded-3xl flex gap-4 cursor-pointer shadow-sm border border-slate-50 dark:border-slate-800"
+                >
+                  <img src={pkg.image} alt={pkg.name} className="w-24 h-24 rounded-2xl object-cover" />
+                  <div className="flex-1 py-1">
+                    <div className="flex justify-between">
+                      <div className="flex text-yellow-400">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={i} size={12} fill={i < Math.floor(pkg.rating) ? 'currentColor' : 'none'} />
+                        ))}
+                      </div>
+                      <Bookmark size={16} className="text-slate-300" />
+                    </div>
+                    <p className="font-bold mt-1 dark:text-white">{pkg.name}</p>
+                    <p className="text-xs text-slate-400">{pkg.location}</p>
+                    <p className="text-xs text-slate-400 mt-2">{pkg.duration}</p>
+                  </div>
                 </div>
-                <button onClick={() => setShowDestinationInfo(null)} className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 dark:text-white">
-                  <Plane size={20} className="rotate-45" />
-                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'flights' && (
+        <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] shadow-xl border border-slate-50 dark:border-slate-800">
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
+              <Plane className="text-blue-600" />
+              <div className="flex-1">
+                <p className="text-[10px] uppercase font-bold text-slate-400">From</p>
+                <p className="font-bold dark:text-white">Sylhet, BD</p>
               </div>
-              <p className="text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">{showDestinationInfo.description}</p>
-              <div className="bg-primary/5 dark:bg-primary/10 p-4 rounded-2xl border border-primary/10 mb-4">
-                <h4 className="font-bold text-primary text-sm mb-2 flex items-center gap-2">
-                  <Info size={16} />
-                  Weather & Best Time
-                </h4>
-                <p className="text-sm text-slate-700 italic">{showDestinationInfo.weather}</p>
+            </div>
+            <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
+              <MapPin className="text-red-500" />
+              <div className="flex-1">
+                <p className="text-[10px] uppercase font-bold text-slate-400">To</p>
+                <p className="font-bold dark:text-white">Manarola, IT</p>
               </div>
-              <div className="bg-accent/5 p-4 rounded-2xl border border-accent/10">
-                <h4 className="font-bold text-accent text-sm mb-2 flex items-center gap-2">
-                  <Star size={16} />
-                  Pro Tip
-                </h4>
-                <p className="text-sm text-slate-700 italic">{showDestinationInfo.tip}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
+                <p className="text-[10px] uppercase font-bold text-slate-400">Date</p>
+                <p className="font-bold dark:text-white">20 Jun, 2024</p>
               </div>
-              <button onClick={() => setShowDestinationInfo(null)} className="w-full bg-primary text-white py-4 rounded-2xl font-bold mt-8">
-                Got it!
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
+                <p className="text-[10px] uppercase font-bold text-slate-400">Return Date</p>
+                <p className="font-bold dark:text-white">25 Jun, 2024</p>
+              </div>
+            </div>
+            <button 
+              onClick={onSearchFlights}
+              className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-600/20"
+            >
+              Search
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-const DestinationCard = ({ city, country, price, image, onClick, currency, t }: any) => {
-  const getCurrencySymbol = (curr: string) => {
-    switch(curr) {
-      case 'EUR': return '€';
-      case 'GBP': return '£';
-      case 'ETB': return 'Br';
-      default: return '$';
-    }
-  };
-
-  const convertPrice = (p: number, curr: string) => {
-    switch(curr) {
-      case 'EUR': return Math.round(p * 0.92);
-      case 'GBP': return Math.round(p * 0.79);
-      case 'ETB': return Math.round(p * 56.5);
-      default: return p;
-    }
-  };
-
+const PackageDetailsScreen = ({ pkg, onBack, onBook }: { pkg: Package, onBack: () => void, onBook: () => void }) => {
   return (
-    <div onClick={onClick} className="relative rounded-3xl overflow-hidden group cursor-pointer h-48">
-      <img src={image} alt={city} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-      <div className="absolute bottom-4 left-4 text-white">
-        <p className="text-xs font-medium opacity-80">{country}</p>
-        <h3 className="font-bold text-lg leading-tight">{city}</h3>
-        <p className="text-xs mt-1 font-semibold">{t('from')} {getCurrencySymbol(currency)}{convertPrice(price, currency)}</p>
+    <div className="fixed inset-0 bg-white dark:bg-slate-950 z-[80] flex flex-col overflow-y-auto no-scrollbar">
+      <div className="relative h-[400px] w-full">
+        <img src={pkg.image} alt={pkg.name} className="w-full h-full object-cover" />
+        <div className="absolute top-8 left-6 right-6 flex justify-between">
+          <button onClick={onBack} className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white">
+            <ArrowLeft size={20} />
+          </button>
+          <button className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white">
+            <Bookmark size={20} />
+          </button>
+        </div>
       </div>
-      <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md p-2 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity">
-        <Info size={16} />
+
+      <div className="flex-1 bg-white dark:bg-slate-950 -mt-10 rounded-t-[40px] px-8 pt-10 pb-24 relative z-10">
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white">{pkg.name}</h2>
+            <p className="text-slate-400">{pkg.location}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-2">
+              {[1, 2, 3].map(i => (
+                <img key={i} src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i}`} className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-950" alt="User" />
+              ))}
+            </div>
+            <span className="text-xs font-bold text-slate-400">4.5</span>
+            <button className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-full">Check Availability</button>
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <h3 className="font-bold text-lg mb-2 dark:text-white">About Trip</h3>
+          <p className="text-slate-500 text-sm leading-relaxed">
+            {pkg.description}
+          </p>
+        </div>
+
+        <div className="mb-8">
+          <h3 className="font-bold text-lg mb-4 dark:text-white">What's Included?</h3>
+          <div className="flex gap-8">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-12 h-12 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400">
+                <Plane size={20} />
+              </div>
+              <span className="text-[10px] font-bold text-slate-400">Flight</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-12 h-12 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400">
+                <Hotel size={20} />
+              </div>
+              <span className="text-[10px] font-bold text-slate-400">Hotel</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-12 h-12 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400">
+                <Car size={20} />
+              </div>
+              <span className="text-[10px] font-bold text-slate-400">Transfer</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex gap-2">
+              <img src={pkg.image} className="w-24 h-16 rounded-xl object-cover" alt="Gallery" />
+              <img src={pkg.image} className="w-24 h-16 rounded-xl object-cover" alt="Gallery" />
+            </div>
+            <button className="text-xs text-blue-600 font-bold">See all 156 Photos</button>
+          </div>
+        </div>
+
+        <div className="mb-8 h-40 rounded-3xl overflow-hidden relative">
+          <img src="https://images.pexels.com/photos/21014/pexels-photo.jpg" className="w-full h-full object-cover" alt="Map" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-xl">
+              <MapPin size={20} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-950 p-6 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center z-20">
+        <div>
+          <p className="text-xs text-slate-400">Total cost</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">${pkg.price} <span className="text-xs font-normal text-slate-400">/ person</span></p>
+        </div>
+        <button 
+          onClick={onBook}
+          className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-600/20"
+        >
+          Book Now
+        </button>
       </div>
     </div>
   );
 };
 
-const ResultsScreen = ({ flights, onSelect, onBack, language }: { flights: Flight[], onSelect: (f: Flight) => void, onBack: () => void, language: string }) => {
-  const [sortBy, setSortBy] = useState('price');
-  const t = (key: string) => translations[language]?.[key] || translations['English'][key];
-
-  const sortedFlights = [...flights].sort((a, b) => {
-    if (sortBy === 'price') return a.price - b.price;
-    if (sortBy === 'duration') return a.duration.localeCompare(b.duration);
-    return 0;
-  });
-
+const FlightResultsScreen = ({ flights, onSelect, onBack }: { flights: Flight[], onSelect: (f: Flight) => void, onBack: () => void }) => {
   return (
-    <div className="pb-24 pt-8 px-4 md:px-6 max-w-4xl mx-auto overflow-x-hidden">
-      <header className="flex items-center gap-4 mb-8">
-        <button onClick={onBack} className="bg-white dark:bg-slate-800 p-2 rounded-full shadow-sm border border-slate-100 dark:border-slate-700">
+    <div className="pb-24 pt-8 px-6 max-w-4xl mx-auto">
+      <header className="flex justify-between items-center mb-8">
+        <button onClick={onBack} className="w-10 h-10 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-800">
           <ArrowLeft size={20} className="text-slate-600 dark:text-slate-400" />
         </button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight dark:text-white">{t('availableFlights')}</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">{flights.length} {t('flightsFound')}</p>
-        </div>
+        <h2 className="text-xl font-bold dark:text-white">Flight</h2>
+        <button className="w-10 h-10 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-800">
+          <Filter size={20} className="text-slate-600 dark:text-slate-400" />
+        </button>
       </header>
 
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
-        <SortOption active={sortBy === 'price'} onClick={() => setSortBy('price')} label={t('cheapest')} />
-        <SortOption active={sortBy === 'duration'} onClick={() => setSortBy('duration')} label={t('fastest')} />
-        <SortOption active={sortBy === 'departure'} onClick={() => setSortBy('departure')} label={t('earliest')} />
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-[40px] shadow-sm border border-slate-50 dark:border-slate-800 mb-8 flex justify-between items-center">
+        <div className="text-center">
+          <p className="text-2xl font-bold dark:text-white">Sylhet</p>
+          <p className="text-xs text-slate-400">Bangladesh</p>
+        </div>
+        <div className="flex flex-col items-center gap-1">
+          <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white">
+            <Plane className="rotate-45" size={24} />
+          </div>
+        </div>
+        <div className="text-center">
+          <p className="text-2xl font-bold dark:text-white">Manarola</p>
+          <p className="text-xs text-slate-400">Italy</p>
+        </div>
+      </div>
+
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="font-bold text-lg dark:text-white">Popular Flights</h3>
+        <button className="text-xs text-slate-400 flex items-center gap-1">Sort By <ChevronRight size={12} /></button>
       </div>
 
       <div className="space-y-4">
-        {sortedFlights.map((flight) => (
-          <motion.div 
+        {flights.map(flight => (
+          <div 
             key={flight.id}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            whileHover={{ scale: 1.01 }}
-            className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm card-hover"
+            onClick={() => onSelect(flight)}
+            className="bg-white dark:bg-slate-900 p-6 rounded-[40px] shadow-sm border border-slate-50 dark:border-slate-800 cursor-pointer"
           >
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <Plane size={16} className="text-primary" />
+                <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center">
+                  <Plane size={16} className="text-blue-600" />
                 </div>
-                <span className="font-bold text-sm dark:text-white">{flight.airline}</span>
+                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">100% on time</span>
               </div>
-              <span className="text-primary font-bold text-lg">${flight.price}</span>
+              <Bookmark size={16} className="text-slate-300" />
             </div>
-
-            <div className="flex justify-between items-center mb-6">
-              <div className="text-center">
-                <p className="text-2xl font-bold dark:text-white">{new Date(flight.departure).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">{flight.from.substring(0, 3)}</p>
+            
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <p className="text-xl font-bold dark:text-white">7:30 AM</p>
+                <p className="text-xs text-slate-400">London</p>
               </div>
-              
-              <div className="flex-1 px-4 flex flex-col items-center">
-                <p className="text-[10px] text-slate-400 font-bold mb-1">{flight.duration}</p>
-                <div className="w-full h-[1px] bg-slate-200 dark:bg-slate-700 relative">
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-slate-900 px-1">
-                    <Plane size={12} className="text-slate-300 dark:text-slate-600" />
-                  </div>
+              <div className="flex flex-col items-center flex-1 px-4">
+                <div className="w-full h-[1px] bg-slate-100 dark:bg-slate-800 relative">
+                  <Plane size={14} className="absolute left-1/2 -translate-x-1/2 -top-[7px] text-blue-600" />
                 </div>
-                <p className="text-[10px] text-slate-400 font-bold mt-1">Direct</p>
+                <p className="text-[10px] text-slate-400 mt-2">2h 40m</p>
               </div>
-
-              <div className="text-center">
-                <p className="text-2xl font-bold dark:text-white">{new Date(flight.arrival).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">{flight.to.substring(0, 3)}</p>
+              <div className="text-right">
+                <p className="text-xl font-bold dark:text-white">9:30 PM</p>
+                <p className="text-xs text-slate-400">Goa</p>
               </div>
             </div>
 
-            <button 
-              onClick={() => onSelect(flight)}
-              className="w-full bg-slate-50 dark:bg-slate-800 text-primary py-3 rounded-xl font-bold hover:bg-primary hover:text-white transition-all border border-primary/10"
-            >
-              Select Flight
-            </button>
-          </motion.div>
+            <div className="flex justify-center">
+              <p className="text-xl font-bold text-slate-900 dark:text-white">${flight.price}<span className="text-xs font-normal text-slate-400">/person</span></p>
+            </div>
+          </div>
         ))}
       </div>
     </div>
@@ -1232,133 +1422,177 @@ const SortOption = ({ active, onClick, label }: any) => (
   </button>
 );
 
-const DetailsScreen = ({ flight, onBook, onBack, language }: { flight: Flight, onBook: () => void, onBack: () => void, language: string }) => {
-  const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
-  const t = (key: string) => translations[language]?.[key] || translations['English'][key];
-
+const SeatSelectionScreen = ({ onBack, onContinue }: { onBack: () => void, onContinue: (seat: string) => void }) => {
+  const [selectedSeat, setSelectedSeat] = useState('04');
+  
   return (
-    <div className="pb-24 pt-8 px-4 md:px-6 max-w-4xl mx-auto overflow-x-hidden">
-      <header className="flex items-center gap-4 mb-8">
-        <button onClick={onBack} className="bg-white dark:bg-slate-800 p-2 rounded-full shadow-sm border border-slate-100 dark:border-slate-700">
+    <div className="pb-24 pt-8 px-6 max-w-4xl mx-auto">
+      <header className="flex justify-between items-center mb-8">
+        <button onClick={onBack} className="w-10 h-10 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-800">
           <ArrowLeft size={20} className="text-slate-600 dark:text-slate-400" />
         </button>
-        <h1 className="text-2xl font-bold tracking-tight dark:text-white">{t('flightDetails') || 'Flight Details'}</h1>
+        <h2 className="text-xl font-bold dark:text-white">Select Seat</h2>
+        <div className="w-10" />
       </header>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 mb-6 relative">
-        <div className="absolute top-4 right-4 text-white/10">
-          <Cloud size={100} />
+      <div className="flex justify-between items-center mb-12">
+        <div className="text-center">
+          <p className="text-2xl font-bold dark:text-white">Larkrow</p>
+          <p className="text-xs text-slate-400">UK</p>
         </div>
-
-        <div className="bg-primary p-6 text-white relative z-10">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <p className="text-xs opacity-70 font-medium uppercase tracking-widest">Flight Number</p>
-              <p className="text-lg font-bold">{flight.id}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs opacity-70 font-medium uppercase tracking-widest">Airline</p>
-              <p className="text-lg font-bold">{flight.airline}</p>
-            </div>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <div className="text-center">
-              <p className="text-3xl font-bold">{flight.from.substring(0, 3).toUpperCase()}</p>
-              <p className="text-xs opacity-70">{flight.from}</p>
-            </div>
-            <div className="flex-1 flex flex-col items-center px-4">
-              <Plane className="rotate-90 mb-2" size={24} />
-              <div className="w-full h-[1px] bg-white/30" />
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold">{flight.to.substring(0, 3).toUpperCase()}</p>
-              <p className="text-xs opacity-70">{flight.to}</p>
-            </div>
-          </div>
+        <div className="w-12 h-12 border-2 border-blue-600 rounded-full flex items-center justify-center text-blue-600">
+          <Plane className="rotate-45" size={24} />
         </div>
-
-        <div className="p-6 space-y-6">
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <p className="text-xs text-slate-400 font-bold uppercase mb-1">Departure</p>
-              <p className="font-bold dark:text-white">{new Date(flight.departure).toLocaleString()}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-bold uppercase mb-1">Arrival</p>
-              <p className="font-bold dark:text-white">{new Date(flight.arrival).toLocaleString()}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-bold uppercase mb-1">Class</p>
-              <p className="font-bold dark:text-white">{flight.class}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-bold uppercase mb-1">Duration</p>
-              <p className="font-bold dark:text-white">{flight.duration}</p>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
-            <h3 className="font-bold mb-4 flex items-center gap-2 dark:text-white">
-              <Armchair size={18} className="text-primary" />
-              {t('selectSeat')}
-            </h3>
-            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6">
-              <div className="grid grid-cols-4 gap-3 max-w-[200px] mx-auto">
-                {['A', 'B', 'C', 'D'].map(col => (
-                  [1, 2, 3, 4].map(row => {
-                    const seat = `${row}${col}`;
-                    const isOccupied = Math.random() < 0.2;
-                    return (
-                      <button
-                        key={seat}
-                        disabled={isOccupied}
-                        onClick={() => setSelectedSeat(seat)}
-                        className={`aspect-square rounded-lg flex items-center justify-center text-[10px] font-bold transition-all ${isOccupied ? 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-600 cursor-not-allowed' : selectedSeat === seat ? 'bg-primary text-white scale-110 shadow-lg shadow-primary/30' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-primary'}`}
-                      >
-                        {seat}
-                      </button>
-                    );
-                  })
-                ))}
-              </div>
-              <div className="flex justify-center gap-6 mt-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700" />
-                  <span className="text-[10px] font-bold text-slate-400">{t('available')}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-slate-200 dark:bg-slate-700" />
-                  <span className="text-[10px] font-bold text-slate-400">{t('occupied')}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-primary" />
-                  <span className="text-[10px] font-bold text-slate-400">{t('selected')}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
-            <h3 className="font-bold mb-4 dark:text-white">{t('extras')}</h3>
-            <div className="flex gap-4">
-              <ExtraOption icon={<Plane size={16} />} label={t('baggage')} price="$25" />
-              <ExtraOption icon={<UserIcon size={16} />} label={t('seat')} price="$15" />
-              <ExtraOption icon={<Bell size={16} />} label={t('insurance')} price="$10" />
-            </div>
-          </div>
+        <div className="text-center">
+          <p className="text-2xl font-bold dark:text-white">Havana</p>
+          <p className="text-xs text-slate-400">Havana</p>
         </div>
       </div>
 
-      <div className="fixed bottom-24 left-6 right-6 max-w-4xl mx-auto">
+      <div className="mb-8">
+        <p className="text-center text-slate-400 text-xs font-bold uppercase tracking-widest mb-6">Economy Class</p>
+        <div className="grid grid-cols-4 gap-4 max-w-[280px] mx-auto">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(i => {
+            const seatNum = i.toString().padStart(2, '0');
+            const isSelected = selectedSeat === seatNum;
+            const isBooked = [3, 7, 11].includes(i);
+            
+            return (
+              <button 
+                key={i}
+                disabled={isBooked}
+                onClick={() => setSelectedSeat(seatNum)}
+                className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold transition-all ${
+                  isSelected ? 'bg-blue-600 text-white' : 
+                  isBooked ? 'bg-red-50 text-red-100' : 
+                  'bg-slate-50 dark:bg-slate-800 text-slate-400'
+                }`}
+              >
+                {i}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mb-12">
+        <p className="text-center text-slate-400 text-xs font-bold uppercase tracking-widest mb-6">Business Class</p>
+        <div className="grid grid-cols-4 gap-4 max-w-[280px] mx-auto">
+          {[13, 14, 15, 16].map(i => (
+            <button 
+              key={i}
+              className="w-12 h-12 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 flex items-center justify-center font-bold"
+            >
+              {i}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-[40px] shadow-sm border border-slate-50 dark:border-slate-800 flex justify-between items-center mb-8">
+        <div>
+          <p className="text-xs text-slate-400">Seat Number : {selectedSeat}</p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-400">Ticket : $120</p>
+        </div>
+      </div>
+
+      <div className="flex justify-center">
         <button 
-          onClick={onBook}
-          disabled={!selectedSeat}
-          className={`w-full py-4 rounded-2xl font-bold shadow-lg transition-all flex items-center justify-between px-8 ${selectedSeat ? 'bg-primary text-white shadow-primary/20 hover:bg-primary-dark' : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'}`}
+          onClick={() => onContinue(selectedSeat)}
+          className="text-blue-600 font-bold flex items-center gap-2"
         >
-          <span>{selectedSeat ? `${t('bookSeat') || 'Book Seat'} ${selectedSeat}` : (t('selectSeat') || 'Select a Seat')}</span>
-          <span className="text-xl">${flight.price}</span>
+          Continue <ArrowRight size={16} />
         </button>
+      </div>
+    </div>
+  );
+};
+
+const TicketScreen = ({ booking, onBack }: { booking: any, onBack: () => void }) => {
+  if (!booking) return null;
+  
+  return (
+    <div className="pb-24 pt-8 px-6 max-w-4xl mx-auto">
+      <header className="flex justify-between items-center mb-8">
+        <button onClick={onBack} className="w-10 h-10 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-800">
+          <ArrowLeft size={20} className="text-slate-600 dark:text-slate-400" />
+        </button>
+        <h2 className="text-xl font-bold dark:text-white">Ticket</h2>
+        <div className="w-10" />
+      </header>
+
+      <div className="bg-slate-900 rounded-[40px] overflow-hidden shadow-2xl">
+        <div className="p-8">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <p className="text-2xl font-bold text-white">{booking.from_city || booking.location || 'Origin'}</p>
+              <p className="text-xs text-slate-400">Departure</p>
+            </div>
+            <div className="w-12 h-12 border-2 border-blue-600 rounded-full flex items-center justify-center text-blue-600">
+              <Plane className="rotate-45" size={24} />
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-white">{booking.to_city || booking.name || 'Destination'}</p>
+              <p className="text-xs text-slate-400">Arrival</p>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <p className="text-xl font-bold text-white">{booking.departure_time || '07:30 AM'}</p>
+              <p className="text-xs text-slate-400">{booking.from_city || 'London'}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xl font-bold text-white">{booking.arrival_time || '09:30 PM'}</p>
+              <p className="text-xs text-slate-400">{booking.to_city || 'Goa'}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative h-4">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/20 border-dashed border-t border-white/40" />
+          <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white dark:bg-slate-950 rounded-full" />
+          <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white dark:bg-slate-950 rounded-full" />
+        </div>
+
+        <div className="p-8 bg-white">
+          <div className="grid grid-cols-2 gap-8 mb-8">
+            <div>
+              <p className="text-[10px] uppercase font-bold text-slate-400">Passengers</p>
+              <p className="font-bold text-slate-900">Jolly Shah</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Date</p>
+              <p className="font-bold text-slate-900">{booking.departure_time ? '03-05-2019' : 'Flexible'}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-slate-400">Flight/Trip</p>
+              <p className="font-bold text-slate-900">{booking.airline || booking.name || 'FB-XJ9921'}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Gate/Ref</p>
+              <p className="font-bold text-slate-900">23 C</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-slate-400">Class</p>
+              <p className="font-bold text-slate-900">Business</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] uppercase font-bold text-slate-400">Seat</p>
+              <p className="font-bold text-slate-900">{booking.seat || 'V1'}</p>
+            </div>
+          </div>
+
+          <div className="flex justify-center mb-8">
+            <QrCode size={120} className="text-slate-900" />
+          </div>
+
+          <button className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-600/20">
+            Download Ticket
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1372,10 +1606,11 @@ const ExtraOption = ({ icon, label, price }: any) => (
   </div>
 );
 
-const PaymentScreen = ({ flight, onConfirm, onBack, language }: { flight: Flight, onConfirm: () => void, onBack: () => void, language: string }) => {
+const PaymentScreen = ({ flight, pkg, onConfirm, onBack, language }: { flight?: Flight, pkg?: Package, onConfirm: () => void, onBack: () => void, language: string }) => {
   const stripeLink = "https://buy.stripe.com/test_9B6eV7faW19u4cTeWr6Zy01";
   const [paymentInitiated, setPaymentInitiated] = useState(false);
   const t = (key: string) => translations[language]?.[key] || translations['English'][key];
+  const price = flight?.price || pkg?.price || 0;
 
   const handlePayClick = () => {
     window.open(stripeLink, '_blank');
@@ -1395,8 +1630,8 @@ const PaymentScreen = ({ flight, onConfirm, onBack, language }: { flight: Flight
         <h3 className="font-bold mb-4 dark:text-white">{t('summary')}</h3>
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
-            <span className="text-slate-500 dark:text-slate-400">{t('flightTicket')}</span>
-            <span className="font-bold dark:text-white">${flight.price}</span>
+            <span className="text-slate-500 dark:text-slate-400">{flight ? t('flightTicket') : t('package')}</span>
+            <span className="font-bold dark:text-white">${price}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-slate-500 dark:text-slate-400">{t('taxesFees')}</span>
@@ -1404,7 +1639,7 @@ const PaymentScreen = ({ flight, onConfirm, onBack, language }: { flight: Flight
           </div>
           <div className="border-t border-slate-100 dark:border-slate-800 pt-3 flex justify-between">
             <span className="font-bold dark:text-white">{t('totalAmount')}</span>
-            <span className="font-bold text-primary text-xl">${flight.price + 45}</span>
+            <span className="font-bold text-primary text-xl">${price + 45}</span>
           </div>
         </div>
       </div>
@@ -1414,21 +1649,6 @@ const PaymentScreen = ({ flight, onConfirm, onBack, language }: { flight: Flight
         <PaymentMethod icon={<CreditCard size={20} />} label={t('creditCard')} active={true} />
         <PaymentMethod icon={<Plane size={20} />} label={t('applePay')} active={false} />
         <PaymentMethod icon={<Plane size={20} />} label={t('googlePay')} active={false} />
-      </div>
-
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-slate-800">
-        <div className="space-y-4">
-          <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-4">
-            {paymentInitiated 
-              ? (t('paymentInitiatedMsg') || "Payment window opened. Please complete the payment in the new tab and then confirm below.")
-              : (t('paymentRedirectMsg') || "You will be redirected to our secure Stripe checkout to complete your payment.")}
-          </p>
-          <div className="flex justify-center">
-            <div className={`w-16 h-10 rounded-lg flex items-center justify-center font-bold text-xs transition-colors ${paymentInitiated ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
-              {paymentInitiated ? <Check size={20} /> : 'STRIPE'}
-            </div>
-          </div>
-        </div>
       </div>
 
       {!paymentInitiated ? (
@@ -1514,7 +1734,7 @@ const ConfirmationScreen = ({ onDone, language }: { onDone: () => void, language
   );
 };
 
-const HistoryScreen = ({ bookings, onCancel, language }: { bookings: Booking[], onCancel: (id: number) => void, language: string }) => {
+const HistoryScreen = ({ bookings, onCancel, onSelect, language }: { bookings: Booking[], onCancel: (id: number) => void, onSelect: (b: Booking) => void, language: string }) => {
   const t = (key: string) => translations[language]?.[key] || translations['English'][key];
   return (
     <div className="pb-24 pt-8 px-4 md:px-6 max-w-4xl mx-auto overflow-x-hidden">
@@ -1541,7 +1761,8 @@ const HistoryScreen = ({ bookings, onCancel, language }: { bookings: Booking[], 
               key={booking.id} 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800"
+              onClick={() => onSelect(booking)}
+              className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800 cursor-pointer hover:border-primary/50 transition-colors"
             >
               <div className="p-5">
                 <div className="flex justify-between items-center mb-4">
@@ -2730,10 +2951,16 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [authIsLogin, setAuthIsLogin] = useState(true);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'info' } | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+
+  // Auth States
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authName, setAuthName] = useState('');
 
   // Global Settings
   const [language, setLanguage] = useState('English');
@@ -2789,63 +3016,94 @@ export default function App() {
     setBookings(data);
   };
 
-  const handleLogin = (u: User) => {
-    setUser(u);
-    setScreen('search');
+  const handleLogin = async (email: string, pass: string) => {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUser(data);
+        setScreen('home');
+      } else {
+        alert(data.error);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSignup = async (name: string, email: string, pass: string) => {
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password: pass })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUser(data);
+        setScreen('home');
+      } else {
+        alert(data.error);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleSearch = async (from: string, to: string, date: string, flightClass: string) => {
     const res = await fetch(`/api/flights/search?from=${from}&to=${to}&date=${date}&class=${flightClass}`);
     const data = await res.json();
     setFlights(data);
-    setScreen('results');
+    setScreen('flight-results');
   };
 
   const handleBooking = async () => {
-    if (!user || !selectedFlight) return;
+    if (!user || (!selectedFlight && !selectedPackage)) return;
+    
+    const bookingData = selectedFlight ? {
+      user_id: user.id,
+      flight_id: selectedFlight.id,
+      from_city: selectedFlight.from,
+      to_city: selectedFlight.to,
+      departure_time: selectedFlight.departure,
+      arrival_time: selectedFlight.arrival,
+      airline: selectedFlight.airline,
+      price: selectedFlight.price,
+      seat: '12A'
+    } : {
+      user_id: user.id,
+      package_id: selectedPackage!.id,
+      name: selectedPackage!.name,
+      location: selectedPackage!.location,
+      price: selectedPackage!.price,
+      duration: selectedPackage!.duration
+    };
+
     const res = await fetch('/api/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: user.id,
-        flight_id: selectedFlight.id,
-        from_city: selectedFlight.from,
-        to_city: selectedFlight.to,
-        departure_time: selectedFlight.departure,
-        arrival_time: selectedFlight.arrival,
-        airline: selectedFlight.airline,
-        price: selectedFlight.price,
-        seat: '12A'
-      })
+      body: JSON.stringify(bookingData)
     });
+    
     if (res.ok) {
       await fetchBookings();
-      setScreen('confirmation');
+      setScreen('ticket');
 
       const title = 'Booking Confirmed! ✈️';
-      const body = `Your flight to ${selectedFlight.to} has been successfully booked.`;
+      const body = selectedFlight 
+        ? `Your flight to ${selectedFlight.to} has been successfully booked.`
+        : `Your trip to ${selectedPackage!.name} has been successfully booked.`;
       
-      // Add to internal notifications state
       addNotification(title, body, 'booking');
-
-      // Trigger Browser Notification
-      notificationService.showNotification(title, {
-        body,
-        icon: 'https://ais-dev-dsoscwtkqsb74h76fletr3-361430282127.europe-west2.run.app/favicon.ico'
-      });
-
-      // Show In-App Toast as fallback/extra feedback
+      notificationService.showNotification(title, { body });
       showToast(body);
-
-      // Schedule a reminder (e.g., 2 hours before flight)
-      // For demo purposes, we'll schedule it for 10 seconds from now
-      notificationService.scheduleNotification('Flight Reminder ⏰', 10000, {
-        body: `Don't forget! Your flight to ${selectedFlight.to} departs soon.`,
-      });
-
-      // Also add reminder to internal state after delay
+      
       setTimeout(() => {
-        addNotification('Flight Reminder ⏰', `Don't forget! Your flight to ${selectedFlight.to} departs soon.`, 'reminder');
+        addNotification('Trip Reminder ⏰', `Your trip is coming up soon!`, 'reminder');
       }, 10000);
     }
   };
@@ -2859,71 +3117,145 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20 md:pb-0 md:pt-20 overflow-y-auto transition-colors duration-300">
       <AnimatePresence mode="wait">
         {screen === 'splash' && (
-          <SplashScreen 
-            onLogin={() => { setAuthIsLogin(true); setScreen('auth'); }} 
-            onSignup={() => { setAuthIsLogin(false); setScreen('auth'); }} 
-            language={language}
-          />
+          <SplashScreen onNext={() => setScreen('auth-welcome')} />
         )}
 
-        {screen === 'auth' && (
-          <motion.div key="auth" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <AuthScreen 
-              onLogin={handleLogin} 
-              initialIsLogin={authIsLogin} 
-              onBack={() => setScreen('splash')} 
+        {screen === 'auth-welcome' && (
+          <motion.div key="auth-welcome" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <WelcomeScreen 
+              onSignup={() => setScreen('auth-signup')}
+              onLogin={() => setScreen('auth-email')}
+            />
+          </motion.div>
+        )}
+
+        {screen === 'auth-email' && (
+          <motion.div key="auth-email" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <EmailScreen 
+              onContinue={(email) => { setAuthEmail(email); setScreen('auth-password'); }}
+              onSignup={() => setScreen('auth-signup')}
+              onBack={() => setScreen('auth-welcome')}
+            />
+          </motion.div>
+        )}
+
+        {screen === 'auth-password' && (
+          <motion.div key="auth-password" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <PasswordScreen 
+              onContinue={(pass) => handleLogin(authEmail, pass)}
+              onForgot={() => setScreen('auth-forgot')}
+              onBack={() => setScreen('auth-email')}
+            />
+          </motion.div>
+        )}
+
+        {screen === 'auth-signup' && (
+          <motion.div key="auth-signup" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <SignupScreen 
+              onSignup={handleSignup}
+              onLogin={() => setScreen('auth-email')}
+              onBack={() => setScreen('auth-welcome')}
+            />
+          </motion.div>
+        )}
+
+        {screen === 'auth-forgot' && (
+          <motion.div key="auth-forgot" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <ForgotScreen 
+              onSend={(email) => { setAuthEmail(email); setScreen('auth-verify'); }}
+              onBack={() => setScreen('auth-password')}
+            />
+          </motion.div>
+        )}
+
+        {screen === 'auth-verify' && (
+          <motion.div key="auth-verify" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <VerifyScreen 
+              email={authEmail}
+              onVerify={(code) => { alert('Verified!'); setScreen('auth-password'); }}
+              onResend={() => alert('Code resent!')}
+              onBack={() => setScreen('auth-forgot')}
+            />
+          </motion.div>
+        )}
+
+        {screen === 'home' && (
+          <motion.div key="home" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <HomeScreen 
+              user={user} 
+              onSelectPackage={(p) => { setSelectedPackage(p); setScreen('package-details'); }}
+              onSearchFlights={() => setScreen('flight-search')}
+              onSearchHotels={() => setScreen('hotel-search')}
               language={language}
             />
           </motion.div>
         )}
 
-        {screen === 'search' && (
-          <motion.div key="search" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+        {screen === 'package-details' && selectedPackage && (
+          <motion.div key="package-details" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <PackageDetailsScreen 
+              pkg={selectedPackage} 
+              onBack={() => setScreen('home')}
+              onBook={() => setScreen('payment')}
+            />
+          </motion.div>
+        )}
+
+        {screen === 'flight-search' && (
+          <motion.div key="flight-search" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <SearchScreen onSearch={handleSearch} language={language} currency={currency} />
           </motion.div>
         )}
 
-        {screen === 'results' && (
-          <motion.div key="results" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <ResultsScreen flights={flights} onSelect={(f) => { setSelectedFlight(f); setScreen('details'); }} onBack={() => setScreen('search')} language={language} />
+        {screen === 'flight-results' && (
+          <motion.div key="flight-results" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <FlightResultsScreen flights={flights} onSelect={(f) => { setSelectedFlight(f); setScreen('seat-selection'); }} onBack={() => setScreen('flight-search')} />
           </motion.div>
         )}
 
-        {screen === 'details' && selectedFlight && (
-          <motion.div key="details" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <DetailsScreen flight={selectedFlight} onBook={() => setScreen('payment')} onBack={() => setScreen('results')} language={language} />
+        {screen === 'seat-selection' && selectedFlight && (
+          <motion.div key="seat-selection" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <SeatSelectionScreen onBack={() => setScreen('flight-results')} onContinue={(seat) => setScreen('payment')} />
           </motion.div>
         )}
 
-        {screen === 'payment' && selectedFlight && (
+        {screen === 'payment' && (selectedFlight || selectedPackage) && (
           <motion.div key="payment" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <PaymentScreen flight={selectedFlight} onConfirm={handleBooking} onBack={() => setScreen('details')} language={language} />
+            <PaymentScreen flight={selectedFlight!} pkg={selectedPackage!} onConfirm={handleBooking} onBack={() => setScreen(selectedFlight ? 'seat-selection' : 'package-details')} language={language} />
           </motion.div>
         )}
 
-        {screen === 'confirmation' && (
-          <motion.div key="confirmation" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <ConfirmationScreen onDone={() => setScreen('history')} language={language} />
+        {screen === 'ticket' && (
+          <motion.div key="ticket" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <TicketScreen booking={selectedBooking || bookings[0]} onBack={() => setScreen('my-trips')} />
           </motion.div>
         )}
 
-        {screen === 'history' && (
-          <motion.div key="history" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <HistoryScreen bookings={bookings} onCancel={handleCancel} language={language} />
+        {screen === 'my-trips' && (
+          <motion.div key="my-trips" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <HistoryScreen 
+              bookings={bookings} 
+              onCancel={handleCancel} 
+              onSelect={(b) => { setSelectedBooking(b); setScreen('ticket'); }}
+              language={language} 
+            />
           </motion.div>
         )}
 
-        {screen === 'alerts' && (
-          <motion.div key="alerts" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-            <AlertsScreen notifications={notifications} onClear={() => setNotifications([])} language={language} />
+        {screen === 'saved' && (
+          <motion.div key="saved" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+            <div className="p-8 text-center">
+              <h2 className="text-2xl font-bold dark:text-white">Saved Items</h2>
+              <p className="text-slate-400">Your saved trips and places will appear here.</p>
+            </div>
           </motion.div>
         )}
 
-        {screen === 'profile' && (
-          <motion.div key="profile" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+        {screen === 'settings' && (
+          <motion.div key="settings" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <ProfileScreen 
               user={user} 
-              onLogout={() => { setUser(null); setScreen('auth'); }} 
+              onLogout={() => { setUser(null); setScreen('auth-welcome'); }} 
               onUpdateUser={handleUpdateUser} 
               notifications={notifications}
               language={language}
@@ -2937,7 +3269,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <Navbar activeScreen={screen} setScreen={setScreen} user={user} language={language} />
+      <Navbar activeScreen={screen} setScreen={setScreen} language={language} />
 
       {/* Toast Notification */}
       <AnimatePresence>

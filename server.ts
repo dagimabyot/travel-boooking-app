@@ -38,6 +38,36 @@ async function startServer() {
 
   app.use(express.json());
 
+  // OAuth Routes
+  app.get("/api/auth/:provider/url", (req, res) => {
+    const { provider } = req.params;
+    const redirectUri = `${req.protocol}://${req.get('host')}/auth/callback`;
+    
+    // Mocking the OAuth URL construction
+    const authUrl = `https://${provider}.com/oauth/authorize?client_id=MOCK_ID&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=email%20profile`;
+    
+    res.json({ url: authUrl });
+  });
+
+  app.get("/auth/callback", (req, res) => {
+    // In a real app, we'd exchange the code for tokens and store the user
+    res.send(`
+      <html>
+        <body>
+          <script>
+            if (window.opener) {
+              window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
+              window.close();
+            } else {
+              window.location.href = '/';
+            }
+          </script>
+          <p>Authentication successful. This window should close automatically.</p>
+        </body>
+      </html>
+    `);
+  });
+
   // Auth Routes
   app.post("/api/auth/signup", (req, res) => {
     const { email, password, name } = req.body;
@@ -81,13 +111,44 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  // Mock Packages Search
+  app.get("/api/packages/search", (req, res) => {
+    const packages = Array.from({ length: 20 }).map((_, i) => ({
+      id: `PKG-${i}`,
+      name: ["Palolem Beach", "Venice Beach", "Amalfi Coast", "Santorini Escape", "Bali Retreat"][i % 5],
+      location: ["Italy, Manarola", "USA, California", "Italy, Amalfi", "Greece, Santorini", "Indonesia, Bali"][i % 5],
+      price: 500 + i * 50,
+      rating: 4.5 + (Math.random() * 0.5),
+      image: `https://picsum.photos/seed/pkg${i}/800/600`,
+      description: "A wonderful trip to the most beautiful places on earth. Enjoy the sun, the sea and the local culture.",
+      included: ["Flight", "Hotel", "Transfer"],
+      duration: "3 days 2 nights"
+    }));
+    res.json(packages);
+  });
+
+  // Mock Hotels Search
+  app.get("/api/hotels/search", (req, res) => {
+    const hotels = Array.from({ length: 20 }).map((_, i) => ({
+      id: `HTL-${i}`,
+      name: ["Water Hotel", "Beach Hotel", "Mountain Resort", "City Center Inn", "Luxury Palace"][i % 5],
+      location: ["Italy, Manarola", "USA, California", "Switzerland, Alps", "UK, London", "UAE, Dubai"][i % 5],
+      price: 150 + i * 20,
+      rating: 4.0 + (Math.random() * 1.0),
+      image: `https://picsum.photos/seed/htl${i}/800/600`,
+      description: "Experience luxury and comfort in our premium hotel rooms. We offer the best amenities and services.",
+      amenities: ["Free WiFi", "Pool", "Spa", "Gym"]
+    }));
+    res.json(hotels);
+  });
+
   // Mock Flight Search (In a real app, this would call an external API)
   app.get("/api/flights/search", (req, res) => {
     const { from, to, date } = req.query;
     // Mock data generation
     const airlines = ["SkyHigh", "GlobalJet", "Oceanic", "StarFlyer"];
-    const flights = Array.from({ length: 5 }).map((_, i) => {
-      const depHour = 8 + i * 3;
+    const flights = Array.from({ length: 20 }).map((_, i) => {
+      const depHour = (6 + i) % 24;
       const arrHour = (depHour + 2 + Math.floor(Math.random() * 5)) % 24;
       return {
         id: `FL-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
